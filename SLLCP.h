@@ -16,8 +16,8 @@
 #define OPRESTART	0x01
 #define OPSHUTDOWN	0x02
 #define OPDISCONN	0x03
-#define OPPOLL      0x10
-#define OPPOLLREPLY 0x11
+#define OPPOLL		0x10
+#define OPPOLLREPLY	0x11
 #define OPOUTLASER	0x21
 #define OPOUTCLOSE	0x20
 #define OPOUTSTRIP	0x22
@@ -30,14 +30,9 @@
 #define OPSETACK	0x4f
 #define OPAPREPLY	0x52
 #define OPOUTDMX256	0xc0
-#define OPOUTDMX512 0xd0
+#define OPOUTDMX512	0xd0
 #define OPOUTDMX1K	0xe0
 #define OPOUTDMX2K	0xf0
-
-#define DMX256   256, 0xc0
-#define DMX512   512, 0xd0
-#define DMX1024 1024, 0xe0
-#define DMX2048 2048, 0xf0
 
 struct IFnv1a
 {
