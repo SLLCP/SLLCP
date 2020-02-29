@@ -1,72 +1,38 @@
 #include <iostream>
+
 #include "SLLCP.h"
 #include "Server.h"
-
-void hexDump(const char* desc, const void* addr, const int len)
-{
-	int i;
-	unsigned char buff[17];
-	const unsigned char* pc = (const unsigned char*)addr;
-
-	if (desc != NULL)
-		printf("%s:\n", desc);
-
-	if (len == 0)
-	{
-		printf("  ZERO LENGTH\n");
-		return;
-	}
-	else if (len < 0)
-	{
-		printf("  NEGATIVE LENGTH: %d\n", len);
-		return;
-	}
-
-	for (i = 0; i < len; i++)
-	{
-		if ((i % 16) == 0)
-		{
-			if (i != 0)
-				printf("  %s\n", buff);
-			printf("  %04x ", i);
-		}
-		printf(" %02x", pc[i]);
-
-		if ((pc[i] < 0x20) || (pc[i] > 0x7e))
-			buff[i % 16] = '.';
-		else
-			buff[i % 16] = pc[i];
-		buff[(i % 16) + 1] = '\0';
-	}
-
-	while ((i % 16) != 0)
-	{
-		printf("   ");
-		i++;
-	}
-
-	printf("  %s\n", buff);
-}
+#include "Utils.h"
 
 int main()
 {
-	cout << "Stage Lighting and Laser Control Protocol" << endl;
+	std::cout << "Stage Lighting and Laser Control Protocol" << std::endl;
+	std::cout << "-----------------------------------------" << std::endl << std::endl;
 
-	cout << "Server start." << endl;
+	char serverIp[16] = "192.168.1.202";
 
-	Server* server = new Server("127.0.0.1", 0x1936);
+	Server* server = new Server(serverIp, 0x1936, Dmx512);
 	server->start();
 
-	SllcpPollReply* pollReply = new SllcpPollReply("DjFody", "LBox-01", OPOUTDMX512, true, false, DevNode, 1, 3, 1, 1, 0, 0);
-	hexDump("PollReply", pollReply, sizeof(*pollReply));
-	//server->send(pollReply);
+	//The first Poll sent after 5 seconds. Let's simulate a respond from a Node.
+	delay(6000);
+	char
+		manufacture[STRLENGTH - 1] = "Nejlontacsko",
+		modelName[STRLENGTH] = "LightBox-01";
+	SllcpPollReply* pollReply = new SllcpPollReply(manufacture, modelName, OPOUTDMX512, true, false, DevNode, 1, 3, 1, 1, 0, 0);
+	server->Send(serverIp, pollReply);
 	delete pollReply;
 
-	SllcpOutDmx<Dmx2048>* dmxOut = new SllcpOutDmx<Dmx2048>(10);
-	hexDump("DMXoutput", dmxOut, sizeof(*dmxOut));
-	//server->send(dmxOut);
+	//Create some traffic
+	delay(1500);
+	SllcpOutDmx<Dmx512>* dmxOut = new SllcpOutDmx<Dmx512>(10);
+	HEXDUMP("DMXDATA", dmxOut);
+	std::cout << std::endl << "\tDMXDATA length: " << sizeof(*dmxOut) << std::endl << std::endl;
+	server->Send(serverIp, dmxOut);
 	delete dmxOut;
 
+	//Let the server run for a half minute, than stop
+	delay(30000);
 	server->stop();
 	delete server;
 }

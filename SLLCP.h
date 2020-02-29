@@ -1,7 +1,10 @@
 #pragma once
 #include <cstdint>
+#include <iostream>
 #include <stdlib.h>
 #include <stdexcept>
+
+#include "OpCodes.h"
 
 #define VERSION 0x10 //v1.0
 #define HEADER { 'S', 'L', 'L', 'C', 'P', 'v', VERSION, '\0' };
@@ -11,28 +14,7 @@
 #define FNV1A64PRIME       0x00000100000001B3
 #define FNV1A64OFFSETBASIS 0xcbf29ce484222325
 
-//Operation Codes
-#define OPTESTMSG	0x00
-#define OPRESTART	0x01
-#define OPSHUTDOWN	0x02
-#define OPDISCONN	0x03
-#define OPPOLL		0x10
-#define OPPOLLREPLY	0x11
-#define OPOUTLASER	0x21
-#define OPOUTCLOSE	0x20
-#define OPOUTSTRIP	0x22
-#define OPOUTACK	0x2f
-#define OPGETIPCONF	0x30
-#define OPGETAPLIST	0x31
-#define OPSETMODE	0x40
-#define OPSETIPADD	0x41
-#define OPSETWIFIAP	0x42
-#define OPSETACK	0x4f
-#define OPAPREPLY	0x52
-#define OPOUTDMX256	0xc0
-#define OPOUTDMX512	0xd0
-#define OPOUTDMX1K	0xe0
-#define OPOUTDMX2K	0xf0
+#define STRLENGTH 16
 
 struct IFnv1a
 {
@@ -62,11 +44,12 @@ struct SllcpPollReply
 	uint8_t ID[8] = HEADER;
 	uint8_t OpCode = OPPOLLREPLY;
 
-	uint8_t Manufacture[7] = { 0 };
-	uint8_t ModelName[8] = { 0 };
+	uint8_t Manufacture[STRLENGTH - 1] = { 0 };
+	uint8_t ModelName[STRLENGTH] = { 0 };
 	uint8_t Flags = 0; // Bit 7-6: Reserved (should be 1), Bit 5-4: DmxLength, Bit 3: HasWiFi, Bit 2: HasEthernet; Bit 1-0: DeviceCode
 	uint8_t InterfaceCnt[3] = { 0, 0, 0 }; //Byte 0: Bit 7-4: DmxIn, Bit 3-0: DmxOut; Byte 1: Bit 7-4: MidiIn, Bit 3-0: MidiOut; Byte 2: Bit 7-4: LaserOut, Bit 3-0: StripOut;
 
+	SllcpPollReply() {};
 	SllcpPollReply(const char*, const char*, uint8_t, bool, bool, DeviceCode, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t);
 };
 #pragma endregion
@@ -81,6 +64,7 @@ enum DmxMode
 	Dmx2048 = 0xf0
 };
 
+#pragma pack(push, 1)
 template <DmxMode dm>
 struct  SllcpOutDmx
 {
@@ -90,7 +74,10 @@ struct  SllcpOutDmx
 	uint8_t ID[8] = HEADER;
 	uint8_t OpCode = dm; //Bit 7-6: OpOutDmx, Bit 5-4: Length, Bit 3-0: Interface selector
 
+	uint8_t padding[3] = { 0xaa, 0xbb, 0xcc }; //Can be anything, it's just a padding.
+
 	uint32_t SeqId = 0;
+	uint32_t Forward = 0; //If 0.0.0.0, than the receiver is the addressee, else it's an IP address to forward.
 
 	uint8_t Data[arrsize] = { 0 };
 
@@ -98,6 +85,7 @@ struct  SllcpOutDmx
 
 	void setChannel(int, uint8_t);
 };
+#pragma pack(pop)
 
 template<DmxMode dm>
 inline SllcpOutDmx<dm>::SllcpOutDmx(uint32_t seqId)

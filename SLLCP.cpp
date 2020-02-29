@@ -5,14 +5,14 @@ SllcpPollReply::SllcpPollReply(const char* manufacture, const char* modelName, u
 	if (dmxIn > 15 || dmxOut > 15 || midiIn > 15 || midiOut > 15 || laserOut > 15 || stripOut > 15)
 		throw std::invalid_argument("Max 15 interface supported.");
 
-	memcpy(Manufacture, manufacture, 6);
-	memcpy(ModelName, modelName, 7);
+	memcpy(Manufacture, manufacture, STRLENGTH - 2);
+	memcpy(ModelName, modelName, STRLENGTH - 1);
 
 	Flags = length | hasWiFiIf << 3 | hasEthIf << 2 | dc;
 
 	InterfaceCnt[0] = dmxOut | dmxIn << 4;
 	InterfaceCnt[1] = midiOut | midiIn << 4;
-	InterfaceCnt[0] = stripOut | laserOut << 4;
+	InterfaceCnt[2] = stripOut | laserOut << 4;
 }
 
 SllcpOutLaser::SllcpOutLaser(uint32_t seqId)

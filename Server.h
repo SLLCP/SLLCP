@@ -1,7 +1,7 @@
 #pragma once
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <iostream>
+
 #include <string.h>
 #include <sys/types.h>
 #include <thread>
@@ -15,31 +15,46 @@
 	#include <arpa/inet.h>
 #endif
 
-#define BUFFERSIZE 30
+#include "SLLCP.h"
+#include "Utils.h"
 
-using namespace std;
+#define BROADCASTADDR "192.168.1.255"
+
+#define Send(ip, msg_struct) send(ip, reinterpret_cast<char*>(msg_struct), sizeof(*msg_struct))
+#define Broadcast(msg_struct) sendBroadcast(reinterpret_cast<char*>(msg_struct), sizeof(*msg_struct))
 
 class Server
 {
 private:
-	char buffer[BUFFERSIZE];
-	int sockfd;
-	struct sockaddr_in si_me, si_other;
-	socklen_t addr_size;
+	char
+		manufacture[STRLENGTH - 1] = { 0 },
+		modelName[STRLENGTH] = { 0 },
+		*inputbuffer,
+		clientIp[16];
+	int sockfd, udpPort, buffersize = 20;
+	struct sockaddr_in serverHint, clientHint;
+	socklen_t clientLength;
 	bool running;
 
-	thread listenLoop, discoveryLoop;
+	std::thread listenLoop, discoveryLoop;
 
+	SllcpPollReply* pollReply;
+
+	void init(const char*, int, DmxMode);
+	void setServerName(const char*, const char*);
+
+	void sendBroadcast(char*, int);
 	void sendPoll();
 
 public:
-	Server(const char*, int);
+	Server(const char*, int, DmxMode);
+	Server(const char*, const char*, const char*, int, DmxMode);
 	~Server();
 
 	void start();
 	void stop();
 
 	void receive();
-	void send();
+	void send(const char*, char*, int);
 };
 
