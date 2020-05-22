@@ -13,6 +13,8 @@
 	#include <sys/socket.h>
 	#include <netinet/in.h>
 	#include <arpa/inet.h>
+	#include <errno.h>
+	#include <cmath>
 #endif
 
 #include "SLLCP.h"
@@ -56,5 +58,7 @@ public:
 
 	void receive();
 	void send(const char*, char*, int);
+
+	bool isRunning();
 };
 

@@ -43,11 +43,22 @@ void Server::init(const char* ipAddress, int port, DmxMode dm)
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	udpPort = port;
 
-	std::memset(&serverHint, '\0', sizeof(serverHint));
-	serverHint.sin_addr.S_un.S_addr = ADDR_ANY;
+	memset(&serverHint, '\0', sizeof(serverHint));
 	serverHint.sin_family = AF_INET;
 	serverHint.sin_port = htons(port);
 	inet_pton(AF_INET, ipAddress, &(serverHint.sin_addr));
+
+#ifdef _WIN32
+	DWORD timeout = 3 * 1000;
+	setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof timeout)
+#else
+	struct timeval tv;
+	tv.tv_sec = 3;
+	tv.tv_usec = 0;
+	setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+	int on=1;
+	setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
+#endif
 
 	std::cout << ((bind(sockfd, (struct sockaddr*) & serverHint, sizeof(serverHint)) < 0) ?
 		"Can't bind socket!" : "Socket binded.") << std::endl;
@@ -79,16 +90,24 @@ void Server::start()
 
 void Server::stop()
 {
-	std::cout << "Server is about to stop..." << std::endl;
-	running = false;
-	listenLoop.join();
-	discoveryLoop.join();
-	std::cout << "Server stopped." << std::endl;
+	if (running)
+	{
+		std::cout << "Server is about to stop..." << std::endl;
+		running = false;
+		listenLoop.join();
+		discoveryLoop.join();
+		std::cout << "Server stopped." << std::endl;
+	}
+	else
+	{
+		std::cout << "Can't stop. Server is not running." << std::endl;
+	}
 }
 
 void Server::receive()
 {
 	pollReply = new SllcpPollReply(manufacture, modelName, Dmx512, true, true, DevServer, 0, 0, 0, 0, 0, 0);
+	HEXDUMP("rEpLy", pollReply);
 
 	while (running)
 	{
@@ -158,17 +177,33 @@ void Server::receive()
 
 void Server::send(const char* ipAddress, char* input, int len)
 {
-	sockaddr_in target;
-	std::memset(&target, '\0', sizeof(target));
-	target.sin_family = AF_INET;
-	target.sin_port = htons(udpPort);
-	inet_pton(AF_INET, ipAddress, &(target.sin_addr));
+	if (running)
+	{
+		sockaddr_in target;
+		memset(&target, '\0', sizeof(target));
+		target.sin_family = AF_INET;
+		target.sin_port = htons(udpPort);
+		inet_pton(AF_INET, ipAddress, &(target.sin_addr));
 
-	int sendOk = sendto(sockfd, input, len, 0, (sockaddr*)&target, sizeof(target));
-	if (sendOk == SOCKET_ERROR)
-		std::cout << "Error: " << WSAGetLastError() << std::endl;
+		int sendOk = sendto(sockfd, input, len, 0, (sockaddr*)&target, sizeof(target));
+		if (sendOk == -1)
+#ifdef _WIN32
+			std::cout << "Error: " << WSAGetLastError() << std::endl;
+#else
+			fprintf(stderr, "socket() failed: %s\n", strerror(errno));
+#endif
+		else
+			std::cout << SLLCP::getOpName(input[8]) << " message sent." << std::endl;
+	}
 	else
-		std::cout << SLLCP::getOpName(input[8]) << " message sent." << std::endl;
+	{
+		std::cout << "Can't send. Server is not running." << std::endl;
+	}
+}
+
+bool Server::isRunning()
+{
+	return running;
 }
 
 void Server::sendBroadcast(char* input, int len)
@@ -188,4 +223,6 @@ void Server::sendPoll()
 	}
 
 	delete pollReq;
+	
+	std::cout << "Poll loop stopped." << std::endl;
 }

@@ -9,6 +9,7 @@
 #define OPDISCONN	0x03
 #define OPPOLL		0x10
 #define OPPOLLREPLY	0x11
+#define OPPOLLRESULTS 0x12
 #define OPOUTLASER	0x21
 #define OPOUTCLOSE	0x20
 #define OPOUTSTRIP	0x22
